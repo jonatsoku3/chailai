@@ -44,15 +44,26 @@ const AvailabilityPage: React.FC<AvailabilityPageProps> = ({ navigateToBooking, 
     );
     const blocksOnDate = availabilityBlocks.filter(block => getLocalDateKey(block.date) === dateKey);
 
-    const status: {[time: string]: {isBooked: boolean}} = {};
+    const status: {[time: string]: {isBooked: boolean, isPast: boolean}} = {};
+
+    const now = new Date();
+    const isToday = selectedDate.getFullYear() === now.getFullYear() &&
+                  selectedDate.getMonth() === now.getMonth() &&
+                  selectedDate.getDate() === now.getDate();
 
     TIME_SLOTS.forEach(time => {
         const bookingsAtTime = bookingsOnDate.filter(b => b.date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) === time).length;
         const blocksAtTime = blocksOnDate.filter(b => b.date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) === time).length;
         
         const unavailableCount = bookingsAtTime + blocksAtTime;
+        const isBooked = unavailableCount >= totalTechnicians;
+
+        const [hours, minutes] = time.split(':').map(Number);
+        const slotDateTime = new Date(selectedDate);
+        slotDateTime.setHours(hours, minutes, 0, 0);
+        const isPast = isToday && slotDateTime < now;
         
-        status[time] = { isBooked: unavailableCount >= totalTechnicians };
+        status[time] = { isBooked, isPast };
     });
 
     return status;
@@ -76,14 +87,18 @@ const AvailabilityPage: React.FC<AvailabilityPageProps> = ({ navigateToBooking, 
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {TIME_SLOTS.map(time => {
-              const isBooked = timeSlotStatus[time]?.isBooked ?? false;
+              const slotStatus = timeSlotStatus[time];
+              const isBooked = slotStatus?.isBooked ?? false;
+              const isPast = slotStatus?.isPast ?? false;
+              const isDisabled = isBooked || isPast;
+
               return (
                 <button
                   key={time}
                   onClick={() => handleTimeSelect(time)}
-                  disabled={isBooked}
+                  disabled={isDisabled}
                   className={`p-3 rounded-lg text-center font-semibold transition-colors ${
-                    isBooked
+                    isDisabled
                       ? 'bg-red-100 text-red-400 cursor-not-allowed'
                       : 'bg-green-100 text-black hover:bg-green-500 hover:text-white'
                   }`}

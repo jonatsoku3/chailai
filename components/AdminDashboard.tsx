@@ -1,5 +1,5 @@
 import React, { useState, useMemo, FormEvent, useEffect, useRef } from 'react';
-import type { Customer, Employee, Service, Booking, Payment, UserProfile } from '../types';
+import type { Customer, Employee, Service, Booking, Payment, UserProfile, Page } from '../types';
 import StatusDropdown, { getStatusLabel } from './StatusDropdown';
 import ReceiptModal from './ReceiptModal';
 import BarChart from './BarChart';
@@ -127,6 +127,9 @@ interface AdminDashboardProps {
     onDeleteService: (id: string) => void;
     onUpdateBooking: (bookingId: string, updates: Partial<Booking>) => void;
     onDeleteBooking: (id: string) => void;
+    currentUser: Employee | null;
+    onLogout: () => void;
+    setCurrentPage: (page: Page) => void;
 }
 
 const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
@@ -134,7 +137,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
         customers, employees, bookings, services, payments,
         onUpdateCustomer, onDeleteCustomer, onUpdateEmployee, onDeleteEmployee,
         onAddService, onUpdateService, onDeleteService,
-        onUpdateBooking, onDeleteBooking
+        onUpdateBooking, onDeleteBooking,
+        currentUser, onLogout, setCurrentPage
     } = props;
     const [activePage, setActivePage] = useState<AdminPage>('summary');
     const [editingItem, setEditingItem] = useState<UserProfile | Service | null>(null);
@@ -605,19 +609,36 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
         <div className="flex bg-gray-100 min-h-screen">
             <aside className="w-64 bg-white shadow-md flex flex-col">
                 <div className="p-6 text-center border-b">
-                    <h1 className="text-xl font-bold text-black">Admin Panel</h1>
+                    <h1 className="text-xl font-bold text-black">แผงควบคุม</h1>
+                    {currentUser && <p className="text-sm text-gray-500 mt-1">{currentUser.name}</p>}
                 </div>
                 <nav className="flex-1 p-4 space-y-2">
                     {(['summary', 'bookings', 'reports', 'customers', 'employees', 'services'] as AdminPage[]).map(page => (
                         <button 
                             key={page} 
                             onClick={() => setActivePage(page)} 
-                            className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${activePage === page ? 'bg-pink-100 text-pink-700 font-semibold' : 'text-black hover:bg-gray-100'}`}
+                            className={`w-full text-left px-4 py-2 rounded-lg transition-colors flex items-center gap-3 ${activePage === page ? 'bg-pink-100 text-pink-700 font-semibold' : 'text-black hover:bg-gray-100'}`}
                         >
-                            {page.charAt(0).toUpperCase() + page.slice(1)}
+                            {page === 'summary' && <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>}
+                            {page === 'bookings' && <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>}
+                            {page === 'reports' && <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>}
+                            {page === 'customers' && <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>}
+                            {page === 'employees' && <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm-3 5a3 3 0 11-6 0 3 3 0 016 0z" /></svg>}
+                            {page === 'services' && <svg className="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.898 20.573L16.5 21.75l-.398-1.177a3.375 3.375 0 00-2.455-2.456L12.75 18l1.177-.398a3.375 3.375 0 002.455-2.456L16.5 14.25l.398 1.177a3.375 3.375 0 002.456 2.456L20.25 18l-1.177.398a3.375 3.375 0 00-2.456 2.456z" /></svg>}
+                            {page.charAt(0).toUpperCase() + page.slice(1).replace('summary', 'ภาพรวม').replace('bookings', 'การจอง').replace('reports', 'รายงาน').replace('customers', 'ลูกค้า').replace('employees', 'พนักงาน').replace('services', 'บริการ')}
                         </button>
                     ))}
                 </nav>
+                <div className="p-4 border-t space-y-2">
+                    <button onClick={() => setCurrentPage('home')} className="w-full text-left px-4 py-2 rounded-lg transition-colors text-black hover:bg-gray-100 flex items-center gap-3">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
+                        <span>กลับสู่หน้าหลัก</span>
+                    </button>
+                    <button onClick={onLogout} className="w-full text-left px-4 py-2 rounded-lg transition-colors text-black hover:bg-gray-100 flex items-center gap-3">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+                        <span>ออกจากระบบ</span>
+                    </button>
+                </div>
             </aside>
             <main className="flex-1 p-8">
                 {renderPageContent()}

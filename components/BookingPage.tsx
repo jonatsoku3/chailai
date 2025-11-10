@@ -158,6 +158,24 @@ const BookingPage: React.FC<BookingPageProps> = ({ bookingDetails, currentUser, 
     e.preventDefault();
     if (selectedService && slipPreviewUrl && bookingDetails.date && selectedEmployeeId && currentUser) {
         setIsProcessing(true);
+
+        // Re-check availability right before submission to prevent race conditions
+        const bookingTime = bookingDetails.date.getTime();
+        const isEmployeeStillAvailable = !bookings.some(
+            b => b.employeeId === selectedEmployeeId && 
+                 b.date.getTime() === bookingTime && 
+                 (b.status === 'confirmed' || b.status === 'pending')
+        ) && !availabilityBlocks.some(
+            b => b.employeeId === selectedEmployeeId && b.date.getTime() === bookingTime
+        );
+
+        if (!isEmployeeStillAvailable) {
+            alert('ขออภัย ช่างที่ท่านเลือกไม่ว่างในเวลานี้แล้ว กรุณาเลือกช่างคนอื่นหรือเวลาอื่น');
+            setSelectedEmployeeId(null); // Clear selection
+            setIsProcessing(false);
+            return; 
+        }
+
         const newBooking: Omit<Booking, 'id' | 'service'> = {
             customerId: currentUser.uid,
             customerName: currentUser.name,

@@ -224,6 +224,31 @@ const App: React.FC = () => {
     ? bookings.filter(booking => booking.customerId === currentUser.uid)
     : [];
 
+  // AdminDashboard has its own layout, render it separately to make it wider.
+  if (currentPage === 'adminDashboard') {
+    return <AdminDashboard
+                customers={customers}
+                employees={employees}
+                bookings={bookings}
+                services={services}
+                payments={payments}
+                onAdminAddCustomer={handleAdminAddCustomer}
+                onUpdateCustomer={handleUpdateUser}
+                onDeleteCustomer={handleDeleteUser}
+                onAddEmployee={handleAddEmployee}
+                onUpdateEmployee={handleUpdateUser}
+                onDeleteEmployee={handleDeleteUser}
+                onAddService={handleAddService}
+                onUpdateService={handleUpdateService}
+                onDeleteService={handleDeleteService}
+                onUpdateBooking={handleUpdateBooking}
+                onDeleteBooking={handleDeleteBooking}
+                currentUser={currentUser as Employee | null}
+                onLogout={handleLogout}
+                setCurrentPage={navigate}
+            />;
+  }
+
   const renderPage = () => {
     if (!authIsReady) {
         return <div className="min-h-screen flex items-center justify-center"><p>Loading...</p></div>;
@@ -276,25 +301,6 @@ const App: React.FC = () => {
                     onRemoveBlock={handleRemoveBlock}
                     onUpdateBooking={handleUpdateBooking}
                     services={services}
-                />;
-      case 'adminDashboard':
-        return <AdminDashboard
-                    customers={customers}
-                    employees={employees}
-                    bookings={bookings}
-                    services={services}
-                    payments={payments}
-                    onAdminAddCustomer={handleAdminAddCustomer}
-                    onUpdateCustomer={handleUpdateUser}
-                    onDeleteCustomer={handleDeleteUser}
-                    onAddEmployee={handleAddEmployee}
-                    onUpdateEmployee={handleUpdateUser}
-                    onDeleteEmployee={handleDeleteUser}
-                    onAddService={handleAddService}
-                    onUpdateService={handleUpdateService}
-                    onDeleteService={handleDeleteService}
-                    onUpdateBooking={handleUpdateBooking}
-                    onDeleteBooking={handleDeleteBooking}
                 />;
       default:
         return <HomePage setCurrentPage={navigate} services={services} />;
