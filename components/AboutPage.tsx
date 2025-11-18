@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import type { Page, Employee } from '../types';
 
@@ -33,7 +34,6 @@ const AboutPage: React.FC<AboutPageProps> = ({ employees, setCurrentPage }) => {
     {
       date: '26 - 27 มีนาคม 2025',
       title: 'โครงการ ฝึกอบรมสร้างอาชีพเสริมสวย หลักสูตรเล็บเจล ',
-      // FIX: Corrected syntax error in string literal by removing an extra single quote.
       description: 'ณ ศูนย์ประสานแผนพัฒนาท้องถิ่นประจำ อำเภอชาติตระการ จังหวัดพิษณุโลก',
       images: [
         'https://scontent.fbkk4-2.fna.fbcdn.net/v/t39.30808-6/486480300_29098168856448370_8764826870664958926_n.jpg?_nc_cat=108&ccb=1-7&_nc_sid=f727a1&_nc_eui2=AeG0FUTSraczd-YztP5J7b_FIOfw-j7-FUsg5_D6Pv4VSyIVO_dVr1tNSUifNMGHhmEY2UA5v7k9inTf3xghcH8a&_nc_ohc=7M33CAMPB08Q7kNvwHtHGVT&_nc_oc=AdmOpZURlnLkVVkDKvoyFtBtdSEzm47LF1q5GmrfZExMeK4KsoA5JwxDS-pNqwYL9V4&_nc_zt=23&_nc_ht=scontent.fbkk4-2.fna&_nc_gid=Rnnv8pgtpoaU9s3PZJBNxA&oh=00_Afc_QA3C0SusgEwMfH8Ucl-xYje513yqQR2gPAmb9bBjhA&oe=68F5818B',
@@ -81,7 +81,6 @@ const AboutPage: React.FC<AboutPageProps> = ({ employees, setCurrentPage }) => {
           </div>
           <div className="max-w-4xl mx-auto space-y-12">
             {employees.map((employee) => (
-              // Fix: The 'Employee' type uses 'uid' as its unique identifier, not 'id'.
               <div key={employee.uid} className="bg-white p-6 sm:p-8 rounded-2xl shadow-xl w-full">
                 {/* Top section with profile picture and name */}
                 <div className="flex flex-col sm:flex-row items-center text-center sm:text-left gap-6 mb-6">

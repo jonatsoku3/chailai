@@ -1,19 +1,23 @@
+
 import React, { useState, FormEvent } from 'react';
 import type { Page, Booking, UserProfile } from '../types';
 import ReceiptModal from './ReceiptModal';
+import LineIcon from './LineIcon';
 
 interface ProfilePageProps {
   currentUser: UserProfile | null;
   onLogin: (credentials: { email: string, password: string }) => void;
   onRegister: (newCustomerData: { name: string, email: string, phone: string, lineId: string, password: string }) => void;
   onLogout: () => void;
+  onLineLogin: () => void;
   setCurrentPage: (page: Page) => void;
   userBookings: Booking[];
   wasRedirected: boolean;
   onUpdateProfile: (data: Partial<Omit<UserProfile, 'uid' | 'profilePicture' | 'email' | 'role'>> & { currentPassword?: string, newPassword?: string }) => Promise<boolean>;
+  authDomainError?: string | null;
 }
 
-const LoginPage: React.FC<Omit<ProfilePageProps, 'currentUser'|'userBookings' | 'setCurrentPage' | 'onUpdateProfile'>> = ({ onLogin, onRegister, wasRedirected }) => {
+const LoginPage: React.FC<Omit<ProfilePageProps, 'currentUser'|'userBookings' | 'setCurrentPage' | 'onUpdateProfile'>> = ({ onLogin, onRegister, onLineLogin, wasRedirected, authDomainError }) => {
     const [isRegistering, setIsRegistering] = useState(false);
 
     const handleLoginSubmit = (e: FormEvent<HTMLFormElement>) => {
@@ -45,6 +49,33 @@ const LoginPage: React.FC<Omit<ProfilePageProps, 'currentUser'|'userBookings' | 
     return (
         <div className="container mx-auto px-6 py-12 flex justify-center">
             <div className="w-full max-w-md">
+                {authDomainError && (
+                    <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 shadow-sm">
+                        <h3 className="text-red-800 font-bold text-lg mb-2 flex items-center">
+                            <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                            ต้องตั้งค่า Firebase
+                        </h3>
+                        <p className="text-red-700 text-sm mb-3">
+                            โดเมนของหน้าเว็บนี้ยังไม่ได้รับอนุญาตให้เข้าสู่ระบบ โปรดนำชื่อโดเมนด้านล่างไปเพิ่มใน Firebase Console
+                        </p>
+                        <div className="bg-white border border-red-300 rounded p-3 flex items-center justify-between mb-3">
+                            <code className="text-red-600 font-mono font-bold text-sm break-all select-all">{authDomainError}</code>
+                        </div>
+                        <div className="text-xs text-red-600">
+                            <p className="font-semibold mb-1">วิธีแก้ไข:</p>
+                            <ol className="list-decimal list-inside space-y-1 ml-1">
+                                <li>ไปที่ <a href="https://console.firebase.google.com/" target="_blank" rel="noreferrer" className="underline font-semibold hover:text-red-800">Firebase Console</a></li>
+                                <li>เลือกโปรเจกต์ <strong>chailainails-booking</strong></li>
+                                <li>เมนู <strong>Authentication</strong> &gt; <strong>Settings</strong></li>
+                                <li>หัวข้อ <strong>Authorized domains</strong> &gt; กด <strong>Add domain</strong></li>
+                                <li>วางชื่อโดเมนด้านบนแล้วกด Add</li>
+                            </ol>
+                        </div>
+                    </div>
+                )}
+                
                 <div className="bg-white p-8 rounded-2xl shadow-lg">
                     {isRegistering ? (
                         <>
@@ -63,6 +94,17 @@ const LoginPage: React.FC<Omit<ProfilePageProps, 'currentUser'|'userBookings' | 
                                 <input type="password" name="confirmPassword" required placeholder="ยืนยันรหัสผ่าน" className="block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-pink-500 focus:border-pink-500 text-black" />
                                 <button type="submit" className="w-full bg-pink-500 text-white py-3 rounded-full font-semibold hover:bg-pink-600 transition-colors text-lg">สมัครสมาชิก</button>
                             </form>
+                             <div className="my-6 flex items-center">
+                                <div className="flex-grow border-t border-gray-300"></div>
+                                <span className="flex-shrink mx-4 text-sm text-gray-500">หรือ</span>
+                                <div className="flex-grow border-t border-gray-300"></div>
+                            </div>
+                             <button
+                                onClick={onLineLogin}
+                                className="w-full bg-[#06C755] text-white py-3 rounded-full font-semibold hover:bg-[#05a546] transition-colors text-lg flex items-center justify-center gap-2">
+                                <LineIcon className="h-6 w-6" />
+                                สมัครสมาชิกด้วย LINE
+                            </button>
                             <p className="text-center text-sm text-black mt-4">
                                 มีบัญชีอยู่แล้ว? <button onClick={() => setIsRegistering(false)} className="font-semibold text-black hover:underline">เข้าสู่ระบบที่นี่</button>
                             </p>
@@ -80,6 +122,17 @@ const LoginPage: React.FC<Omit<ProfilePageProps, 'currentUser'|'userBookings' | 
                                 <input type="password" name="password" required placeholder="รหัสผ่าน" className="block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-pink-500 focus:border-pink-500 text-black" />
                                 <button type="submit" className="w-full bg-pink-500 text-white py-3 rounded-full font-semibold hover:bg-pink-600 transition-colors text-lg">เข้าสู่ระบบ</button>
                             </form>
+                            <div className="my-6 flex items-center">
+                                <div className="flex-grow border-t border-gray-300"></div>
+                                <span className="flex-shrink mx-4 text-sm text-gray-500">หรือ</span>
+                                <div className="flex-grow border-t border-gray-300"></div>
+                            </div>
+                             <button
+                                onClick={onLineLogin}
+                                className="w-full bg-[#06C755] text-white py-3 rounded-full font-semibold hover:bg-[#05a546] transition-colors text-lg flex items-center justify-center gap-2">
+                                <LineIcon className="h-6 w-6" />
+                                เข้าสู่ระบบด้วย LINE
+                            </button>
                             <p className="text-center text-sm text-black mt-4">
                                 ยังไม่มีบัญชี? <button onClick={() => setIsRegistering(true)} className="font-semibold text-black hover:underline">สมัครสมาชิกที่นี่</button>
                             </p>
@@ -92,12 +145,12 @@ const LoginPage: React.FC<Omit<ProfilePageProps, 'currentUser'|'userBookings' | 
 }
 
 
-const ProfilePage: React.FC<ProfilePageProps> = ({ currentUser, onLogin, onRegister, onLogout, setCurrentPage, userBookings, wasRedirected, onUpdateProfile }) => {
+const ProfilePage: React.FC<ProfilePageProps> = ({ currentUser, onLogin, onRegister, onLogout, onLineLogin, setCurrentPage, userBookings, wasRedirected, onUpdateProfile, authDomainError }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [viewingReceipt, setViewingReceipt] = useState<Booking | null>(null);
 
   if (!currentUser) {
-    return <LoginPage onLogin={onLogin} onRegister={onRegister} onLogout={onLogout} wasRedirected={wasRedirected} />;
+    return <LoginPage onLogin={onLogin} onRegister={onRegister} onLogout={onLogout} onLineLogin={onLineLogin} wasRedirected={wasRedirected} authDomainError={authDomainError} />;
   }
   
   const handleProfileUpdateSubmit = async (e: FormEvent<HTMLFormElement>) => {

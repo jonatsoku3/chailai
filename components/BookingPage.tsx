@@ -19,6 +19,7 @@ const BookingPage: React.FC<BookingPageProps> = ({ bookingDetails, currentUser, 
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showToast, setShowToast] = useState(false);
 
   useEffect(() => {
     setSelectedService(bookingDetails.service);
@@ -196,11 +197,13 @@ const BookingPage: React.FC<BookingPageProps> = ({ bookingDetails, currentUser, 
         
         try {
             await onAddBooking(newBooking, newPayment);
-            setIsConfirmed(true);
+            setShowToast(true);
+            setTimeout(() => {
+                setIsConfirmed(true);
+            }, 2500);
         } catch (error) {
             console.error("Booking failed:", error);
             alert("การจองล้มเหลว กรุณาลองอีกครั้ง");
-        } finally {
             setIsProcessing(false);
         }
     } else {
@@ -210,6 +213,14 @@ const BookingPage: React.FC<BookingPageProps> = ({ bookingDetails, currentUser, 
 
   return (
     <div className="container mx-auto px-6 py-12">
+      {showToast && (
+        <div className="fixed top-5 left-1/2 -translate-x-1/2 bg-green-500 text-white py-3 px-6 rounded-lg shadow-lg z-50 flex items-center gap-3 animate-fade-in-down">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span>ส่งคำขอจองสำเร็จแล้ว!</span>
+        </div>
+      )}
       <div className="max-w-3xl mx-auto">
         <h1 className="text-4xl font-bold text-black text-center mb-8">ยืนยันการจองและชำระเงินมัดจำ</h1>
         <form onSubmit={handleSubmit} className="bg-white p-8 rounded-2xl shadow-lg grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-10">
@@ -286,6 +297,21 @@ const BookingPage: React.FC<BookingPageProps> = ({ bookingDetails, currentUser, 
           </div>
         </form>
       </div>
+       <style>{`
+        @keyframes fade-in-down {
+          from {
+            opacity: 0;
+            transform: translate(-50%, -20px);
+          }
+          to {
+            opacity: 1;
+            transform: translate(-50%, 0);
+          }
+        }
+        .animate-fade-in-down {
+          animation: fade-in-down 0.5s ease-out forwards;
+        }
+      `}</style>
     </div>
   );
 };

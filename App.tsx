@@ -1,7 +1,6 @@
 
-
 import React, { useState, useEffect } from 'react';
-import { onAuthStateChanged, User, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
+import firebase from 'firebase/compat/app';
 import { auth } from './firebase';
 import type { Page, Booking, Payment, BookingDetails, AvailabilityBlock, Customer, Employee, Service, UserProfile, ActiveUser } from './types';
 import Header from './components/Header';
@@ -23,6 +22,7 @@ const App: React.FC = () => {
   const [authIsReady, setAuthIsReady] = useState(false);
   const [postLoginRedirect, setPostLoginRedirect] = useState<Page | null>(null);
   const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
+  const [authDomainError, setAuthDomainError] = useState<string | null>(null);
 
   // Data state from Firestore
   const [services, setServices] = useState<Service[]>([]);
@@ -34,18 +34,23 @@ const App: React.FC = () => {
 
   // Subscribe to Firebase Auth and Firestore data
   useEffect(() => {
-    const unsubAuth = onAuthStateChanged(auth, async (user: User | null) => {
-      if (user) {
-        const userProfile = await db.getUserProfile(user.uid);
-        setCurrentUser(userProfile);
-      } else {
+    const unsubAuth = auth.onAuthStateChanged(async (user: firebase.User | null) => {
+      try {
+        if (user) {
+          const userProfile = await db.getUserProfile(user.uid);
+          setCurrentUser(userProfile);
+        } else {
+          setCurrentUser(null);
+        }
+      } catch (error) {
+        console.error("Auth state change error:", error);
         setCurrentUser(null);
+      } finally {
+        setAuthIsReady(true);
       }
-      setAuthIsReady(true);
     });
 
     const unsubServices = db.onServicesUpdate(setServices);
-    // Fix: `onUsersUpdate` expects a single callback function. This passes a function that sets both customers and employees.
     const unsubUsers = db.onUsersUpdate((customers, employees) => {
       setCustomers(customers);
       setEmployees(employees);
@@ -81,61 +86,176 @@ const App: React.FC = () => {
     }
   };
 
+  const handlePostLoginNavigation = (userProfile: UserProfile) => {
+      if (postLoginRedirect) {
+          navigate(postLoginRedirect);
+          setPostLoginRedirect(null);
+      } else {
+          if (userProfile.role === 'admin') navigate('adminDashboard');
+          else if (userProfile.role === 'technician') navigate('technicianDashboard');
+          else navigate('home');
+      }
+  };
+
   const handleLogin = async (credentials: { email: string, password: string }) => {
-    try {
-        const userCredential = await signInWithEmailAndPassword(auth, credentials.email, credentials.password);
-        const userProfile = await db.getUserProfile(userCredential.user.uid);
-        if (userProfile) {
-            if (postLoginRedirect) {
-                navigate(postLoginRedirect);
-                setPostLoginRedirect(null);
-            } else {
-                if (userProfile.role === 'admin') navigate('adminDashboard');
-                else if (userProfile.role === 'technician') navigate('technicianDashboard');
-                else navigate('home');
+    const performLogin = async () => {
+         const userCredential = await auth.signInWithEmailAndPassword(credentials.email, credentials.password);
+         if (userCredential.user) {
+            const userProfile = await db.getUserProfile(userCredential.user.uid);
+            if (userProfile) {
+                handlePostLoginNavigation(userProfile);
             }
+         }
+    };
+
+    try {
+        await performLogin();
+    } catch (error: any) {
+        if (error.code === 'auth/operation-not-supported-in-this-environment') {
+             console.warn("Environment restricted, switching to memory persistence.");
+             try {
+                await auth.setPersistence(firebase.auth.Auth.Persistence.NONE);
+                await performLogin();
+                alert('แจ้งเตือน: เข้าสู่ระบบในโหมดชั่วคราว (Preview Mode) ระบบจะไม่จำการเข้าสู่ระบบหากรีเฟรชหน้าจอ');
+             } catch (retryError: any) {
+                if (retryError.code === 'auth/operation-not-supported-in-this-environment') {
+                    console.warn("Login failed: Environment does not support this operation.");
+                    alert("ไม่สามารถเข้าสู่ระบบได้ในหน้านี้ (Preview) กรุณาเปิดเว็บในหน้าต่างใหม่");
+                } else {
+                    console.error("Retry Login Error:", retryError);
+                    alert(`ไม่สามารถเข้าสู่ระบบได้ในสภาพแวดล้อมนี้: ${retryError.message}`);
+                }
+             }
+        } else if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+            alert('อีเมลหรือรหัสผ่านไม่ถูกต้อง');
+        } else {
+            console.error("Login Error:", error);
+            alert(`เกิดข้อผิดพลาดในการเข้าสู่ระบบ: ${error.message}`);
         }
-    } catch (error) {
-        console.error("Login Error:", error);
-        alert('อีเมลหรือรหัสผ่านไม่ถูกต้อง');
     }
   };
   
   const handleRegister = async (newUserData: Omit<Customer, 'uid' | 'profilePicture' | 'role'> & { password: string }) => {
+      const performRegister = async () => {
+          const userCredential = await auth.createUserWithEmailAndPassword(newUserData.email, newUserData.password);
+          const user = userCredential.user;
+          if (!user || !user.email) throw new Error("User creation failed");
+          
+          const { uid, email } = user;
+
+          const newUserProfile: Omit<UserProfile, 'uid'> = {
+              email,
+              name: newUserData.name,
+              phone: newUserData.phone,
+              lineId: newUserData.lineId,
+              profilePicture: `https://picsum.photos/seed/${uid}/100/100`,
+              role: 'customer'
+          };
+          
+          await db.addUserProfile(uid, newUserProfile);
+          
+          if(postLoginRedirect) {
+              navigate(postLoginRedirect);
+              setPostLoginRedirect(null);
+          } else {
+              navigate('profile');
+          }
+      };
+
       try {
-        const userCredential = await createUserWithEmailAndPassword(auth, newUserData.email, newUserData.password);
-        const { uid, email } = userCredential.user;
-        if (!email) throw new Error("Email not found on user credential");
-
-        const newUserProfile: Omit<UserProfile, 'uid'> = {
-            email,
-            name: newUserData.name,
-            phone: newUserData.phone,
-            lineId: newUserData.lineId,
-            profilePicture: `https://picsum.photos/seed/${uid}/100/100`,
-            role: 'customer'
-        };
-        
-        await db.addUserProfile(uid, newUserProfile);
-
-        if(postLoginRedirect) {
-            navigate(postLoginRedirect);
-            setPostLoginRedirect(null);
-        } else {
-            navigate('profile');
-        }
+        await performRegister();
       } catch(error: any) {
-          if (error.code === 'auth/email-already-in-use') {
+          if (error.code === 'auth/operation-not-supported-in-this-environment') {
+             try {
+                await auth.setPersistence(firebase.auth.Auth.Persistence.NONE);
+                await performRegister();
+                alert('แจ้งเตือน: สมัครสมาชิกในโหมดชั่วคราว (Preview Mode) ระบบจะไม่จำการเข้าสู่ระบบหากรีเฟรชหน้าจอ');
+             } catch (retryError: any) {
+                if (retryError.code === 'auth/operation-not-supported-in-this-environment') {
+                    console.warn("Register failed: Environment does not support this operation.");
+                    alert("ไม่สามารถสมัครสมาชิกได้ในหน้านี้ (Preview) กรุณาเปิดเว็บในหน้าต่างใหม่");
+                } else {
+                    console.error("Retry Register Error:", retryError);
+                    alert(`ไม่สามารถสมัครสมาชิกได้ในสภาพแวดล้อมนี้: ${retryError.message}`);
+                }
+             }
+          } else if (error.code === 'auth/email-already-in-use') {
               alert('อีเมลนี้ถูกใช้งานแล้ว');
           } else {
               console.error("Registration Error:", error);
-              alert('เกิดข้อผิดพลาดในการสมัครสมาชิก');
+              alert(`เกิดข้อผิดพลาดในการสมัครสมาชิก: ${error.message}`);
           }
       }
   };
 
+  const processLoginResult = async (user: firebase.User) => {
+    if (!user) throw new Error("No user returned");
+
+    let userProfile = await db.getUserProfile(user.uid);
+
+    if (!userProfile) {
+        // New user, create a profile
+        const newUserProfileData: Omit<UserProfile, 'uid'> = {
+            email: user.email || '',
+            name: user.displayName || 'LINE User',
+            phone: '', // Not provided by LINE auth
+            lineId: '', // Not provided by LINE auth
+            profilePicture: user.photoURL || `https://picsum.photos/seed/${user.uid}/100`,
+            role: 'customer'
+        };
+        await db.addUserProfile(user.uid, newUserProfileData);
+        userProfile = await db.getUserProfile(user.uid);
+    }
+
+    if (userProfile) {
+        handlePostLoginNavigation(userProfile);
+    }
+  };
+
+  const handleLineLogin = async () => {
+    const provider = new firebase.auth.OAuthProvider('line.me');
+    try {
+        const result = await auth.signInWithPopup(provider);
+        if (result.user) {
+            await processLoginResult(result.user);
+        }
+    } catch (error: any) {
+        if (error.code === 'auth/unauthorized-domain') {
+            const currentDomain = window.location.hostname;
+            setAuthDomainError(currentDomain);
+            // Alert is handled by UI in ProfilePage, but good to log
+            console.error("Unauthorized Domain:", currentDomain);
+        } else if (error.code === 'auth/operation-not-supported-in-this-environment') {
+             console.warn("Popup operation restricted, attempting fallback...");
+             try {
+                // Fallback to memory persistence when web storage is blocked
+                await auth.setPersistence(firebase.auth.Auth.Persistence.NONE);
+                const result = await auth.signInWithPopup(provider);
+                if (result.user) {
+                     await processLoginResult(result.user);
+                     alert('แจ้งเตือน: คุณกำลังใช้งานในสภาพแวดล้อมที่จำกัด (Preview Mode) การเข้าสู่ระบบจะไม่ถูกบันทึกหากคุณรีเฟรชหน้าจอ');
+                }
+            } catch (innerError: any) {
+                 // Gracefully handle if the environment strictly forbids the operation even with memory persistence
+                 if (innerError.code === 'auth/operation-not-supported-in-this-environment') {
+                     console.warn("LINE Login not supported in this preview environment.");
+                     alert("ขออภัย ไม่สามารถเข้าสู่ระบบด้วย LINE ในหน้า Preview นี้ได้เนื่องจากข้อจำกัดของเบราว์เซอร์ กรุณาลองใช้ 'เข้าสู่ระบบด้วยอีเมล' หรือเปิดเว็บในหน้าต่างใหม่");
+                 } else {
+                     console.error("Retry LINE Login Error:", innerError);
+                     alert(`ไม่สามารถเข้าสู่ระบบได้: ${innerError.message}`);
+                 }
+            }
+        } else if (error.code === 'auth/popup-closed-by-user') {
+             // Do nothing, user closed the popup
+        } else {
+            console.error("LINE Login Error:", error);
+            alert(`เกิดข้อผิดพลาดในการเข้าสู่ระบบด้วย LINE: ${error.message}`);
+        }
+    }
+  };
+
   const handleLogout = async () => {
-    await signOut(auth);
+    await auth.signOut();
     navigate('home');
   };
   
@@ -195,9 +315,9 @@ const App: React.FC = () => {
           alert('ไม่พบอีเมลผู้ใช้');
           return false;
         }
-        const credential = EmailAuthProvider.credential(currentUser.email, data.currentPassword);
-        await reauthenticateWithCredential(auth.currentUser, credential);
-        await updatePassword(auth.currentUser, data.newPassword);
+        const credential = firebase.auth.EmailAuthProvider.credential(currentUser.email, data.currentPassword);
+        await auth.currentUser.reauthenticateWithCredential(credential);
+        await auth.currentUser.updatePassword(data.newPassword);
         alert('เปลี่ยนรหัสผ่านสำเร็จ');
       } else {
         const profileUpdates: Partial<UserProfile> = {
@@ -284,11 +404,13 @@ const App: React.FC = () => {
                     currentUser={currentUser} 
                     onLogin={handleLogin}
                     onRegister={handleRegister}
-                    onLogout={handleLogout} 
+                    onLogout={handleLogout}
+                    onLineLogin={handleLineLogin}
                     setCurrentPage={navigate} 
                     userBookings={userBookings}
                     wasRedirected={!!postLoginRedirect}
                     onUpdateProfile={handleUpdateProfile}
+                    authDomainError={authDomainError}
                 />;
       case 'technicianDashboard':
         return <TechnicianDashboard 

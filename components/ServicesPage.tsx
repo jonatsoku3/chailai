@@ -16,7 +16,6 @@ const ServicesPage: React.FC<ServicesPageProps> = ({ setCurrentPage, services })
   const categories = useMemo(() => {
     const uniqueCategories = [...new Set(bookableServices.map(s => s.category))];
     const desiredOrder = ['ทาเล็บเจล', 'สปา'];
-    // Fix: Explicitly cast sort arguments to string to resolve TypeScript error.
     return uniqueCategories.sort((a, b) => desiredOrder.indexOf(a as string) - desiredOrder.indexOf(b as string));
   }, [bookableServices]);
 

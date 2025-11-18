@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Page, Service } from '../types';
-import { CHAI_LAI_LOGO_BASE64 } from '../constants';
+import { CHAI_LAI_LOGO_BASE64, LINE_ID } from '../constants';
+import LineIcon from './LineIcon';
 
 interface HomePageProps {
   setCurrentPage: (page: Page) => void;
@@ -10,9 +11,10 @@ interface HomePageProps {
 const HomePage: React.FC<HomePageProps> = ({ setCurrentPage, services }) => {
 
   const locationDetails = {
-    address: '777/88 ซอย บรมไตรโลกนารถ 18, ต.ในเมือง, อ.เมืองพิษณุโลก, จ.พิษณุโลก 65000',
+    address: '777/88 ซอย บรมไตรโลกนารถ 18, ต.ในเมือง, อ.เมืองพิษณูโลก, จ.พิษณูโลก 65000',
     hours: '10:00 - 20:00 น. (ทุกวัน)',
     phone: '099-272-8998',
+    lineId: LINE_ID,
     mapEmbedUrl: 'https://www.google.com/maps/embed?pb=!1m10!1m8!1m3!1d352.2688850505721!2d100.24428954838372!3d16.80215690626192!3m2!1i1024!2i768!4f13.1!5e1!3m2!1sth!2sus!4v1760544128228!5m2!1sth!2sus',
     directionsUrl: 'https://maps.app.goo.gl/7FdDVtP2M8iPVgJw6'
   };
@@ -127,6 +129,15 @@ const HomePage: React.FC<HomePageProps> = ({ setCurrentPage, services }) => {
                  <div>
                    <h3 className="font-bold text-lg text-black">โทรศัพท์</h3>
                    <p className="text-black/80">{locationDetails.phone}</p>
+                 </div>
+               </div>
+               <div className="flex items-start">
+                 <div className="bg-green-100 p-3 rounded-full mr-4">
+                   <LineIcon className="h-6 w-6 text-green-600" />
+                 </div>
+                 <div>
+                   <h3 className="font-bold text-lg text-black">Line ID</h3>
+                   <p className="text-black/80">{locationDetails.lineId}</p>
                  </div>
                </div>
                <div className="pt-4">

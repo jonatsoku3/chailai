@@ -266,12 +266,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                 const serviceData: Partial<Service> = { name: data.name, category: data.category, description: data.description, price: data.price, duration: data.duration, image: data.image };
                 if (isCreating) {
                     await onAddService(serviceData as Omit<Service, 'id'>);
-                // FIX: Add a type guard to ensure `editingItem` is a `Service` before accessing its `id` property, resolving the type error.
                 } else if (editingItem && 'id' in editingItem) {
                     await onUpdateService(editingItem.id, serviceData);
                 }
             } else {
-                // FIX: Create specifically typed objects for customers and employees to match the `onUpdateCustomer` and `onUpdateEmployee` prop types, resolving type compatibility errors.
                 if (editingItem && 'uid' in editingItem) {
                      if (activePage === 'customers') {
                         const customerData: Partial<Customer> = { name: data.name, email: data.email, phone: data.phone, lineId: data.lineId };
